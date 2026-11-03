@@ -1,0 +1,11 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - resources/
+
+components:
+  - https://github.com/nick-draper/kustomize-library.git//components/node-affinity?ref=55075ad30a38a4c34226e8a43d301da22c54b27e
+  - https://github.com/nick-draper/kustomize-library.git//components/labels/argocd?ref=55075ad30a38a4c34226e8a43d301da22c54b27e
+  - https://github.com/nick-draper/kustomize-library.git//components/sync-waves?ref=55075ad30a38a4c34226e8a43d301da22c54b27e

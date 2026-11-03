@@ -1,0 +1,9 @@
+.DS_Store
+
+.bin/
+
+**/*credentials*
+**/*secret*
+*.pem
+*.key
+kubeconfig

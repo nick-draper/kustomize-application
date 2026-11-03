@@ -1,0 +1,31 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: example-statefulset-afm-allowed
+  labels:
+    scheduling.my.cluster/compute: cpu
+
+spec:
+  serviceName: example-afm-allowed-headless
+  selector:
+    matchLabels:
+      app: example-afm-allowed
+  template:
+    metadata:
+      labels:
+        app: example-afm-allowed
+    spec:
+      containers:
+        - name: example
+          image: registry.k8s.io/pause:3.10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+
+...

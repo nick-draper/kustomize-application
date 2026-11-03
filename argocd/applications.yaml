@@ -1,0 +1,63 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/nick-draper/kustomize-application.git
+    targetRevision: main
+    path: overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example-qa
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/nick-draper/kustomize-application.git
+    targetRevision: main
+    path: overlays/qa
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qa
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example-main
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/nick-draper/kustomize-application.git
+    targetRevision: main
+    path: overlays/main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

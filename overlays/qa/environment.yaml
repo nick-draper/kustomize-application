@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: scheduling-settings
+
+data:
+  environment: qa
+...
