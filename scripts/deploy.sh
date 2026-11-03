@@ -1,11 +1,11 @@
 #!/bin/bash
-# Start the kustomize-example Minikube profile, install Argo CD v3.5.6, and
-# sync the three example Applications.
+# Start the single Minikube profile named minikube, install Argo CD v3.5.6,
+# and sync the three example Applications.
 #
 # Usage (from the repository root):
 #   ./scripts/deploy.sh
 #
-# The script only talks to the minikube profile named kustomize-example.
+# The script only talks to the profile named minikube.
 # It restores the kubectl context it found on entry.
 
 set -euo pipefail
@@ -13,8 +13,8 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "${root}"
 
-profile=kustomize-example
-ctx=kustomize-example
+profile=minikube
+ctx=minikube
 argocd_manifest=https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.6/manifests/install.yaml
 
 fail() {
@@ -60,7 +60,8 @@ kubectl --context "${ctx}" rollout status deployment/argocd-repo-server -n argoc
 kubectl --context "${ctx}" rollout status deployment/argocd-server -n argocd --timeout=300s
 kubectl --context "${ctx}" rollout status statefulset/argocd-application-controller -n argocd --timeout=300s
 kubectl --context "${ctx}" wait --for=condition=Established crd/applications.argoproj.io --timeout=180s
-kubectl --context "${ctx}" apply --server-side --force-conflicts -f argocd/job-health.yaml
+# Merge one key. A server-side apply of this file alone replaces argocd-cm.
+kubectl --context "${ctx}" patch configmap argocd-cm -n argocd --type merge --patch-file argocd/job-health.yaml
 
 ver=$(kubectl --context "${ctx}" exec -n argocd deploy/argocd-repo-server -- kustomize version)
 [ "${ver}" = "v5.8.1" ] || fail "Argo CD repo server kustomize is '${ver}', expected v5.8.1"

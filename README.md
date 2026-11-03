@@ -22,7 +22,7 @@ The steps are in [docs/minikube.md](docs/minikube.md). From this repository:
 ./scripts/verify.sh
 ```
 
-`deploy.sh` starts the Minikube profile `kustomize-example` (two nodes), installs Argo CD v3.5.6, and applies [argocd/applications.yaml](argocd/applications.yaml). It restores the kubectl context it found on entry. It does not talk to any other context.
+`deploy.sh` starts the Minikube profile `minikube` (two nodes), installs Argo CD v3.5.6, and applies [argocd/applications.yaml](argocd/applications.yaml). It restores the kubectl context it found on entry. It does not talk to any other context.
 
 `verify.sh` is `kubectl` only. It labels the nodes for `dev`, then `qa`, then `prod`, and checks affinity, labels, sync waves, node placement, and that the build-only ConfigMap was not applied. `PASS verify` is the success line.
 
@@ -44,7 +44,7 @@ The overlays pin `kustomize-library` to one commit. Argo CD tracks `main` of thi
 ## Out of scope
 
 - GPU device requests. The gpu node only needs the label `my.cluster/compute=gpu`
-- A cluster other than the `kustomize-example` Minikube profile
+- A cluster other than the Minikube profile named `minikube`
 - Kustomize versions other than 5.8.1
 
 ## Further reading

@@ -1,6 +1,8 @@
 # Deploy the example on Minikube with Argo CD
 
-The checks use `kubectl` against one Minikube profile, `kustomize-example`. They do not use the current kubectl context, and they refuse every other context name.
+Use the one local Minikube profile, named `minikube`. The commands pass `--context minikube`, so they do not follow whatever context kubectl is currently using. `scripts/verify.sh` refuses any other context name.
+
+These are the steps and the tests. Running them is left to you.
 
 You need Docker, Minikube, and kubectl. Argo CD v3.5.6 is the cluster install because that release ships Kustomize 5.8.1. The repo server must print `v5.8.1`. A 5.6 binary will not render `sourceValue` or `kind: Deployment|StatefulSet|Job`.
 
@@ -11,30 +13,30 @@ One node cannot carry both compute profiles, and it cannot be two environments a
 From the repository root:
 
 ```bash
-minikube start -p kustomize-example --driver=docker --nodes=2 --cpus=2 --memory=3072 --kubernetes-version=v1.37.2
-kubectl --context kustomize-example wait --for=condition=Ready nodes --all --timeout=180s
-kubectl --context kustomize-example taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule- || true
+minikube start -p minikube --driver=docker --nodes=2 --cpus=2 --memory=3072 --kubernetes-version=v1.37.2
+kubectl --context minikube wait --for=condition=Ready nodes --all --timeout=180s
+kubectl --context minikube taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule- || true
 
-kubectl --context kustomize-example get nodes --sort-by=.metadata.name
+kubectl --context minikube get nodes --sort-by=.metadata.name
 ```
 
 Label the first node `cpu` and the second `gpu`. Both start as `dev`. `scripts/verify.sh` changes the environment label later.
 
 ```bash
-kubectl --context kustomize-example label node <cpu-node> my.cluster/environment=dev my.cluster/compute=cpu --overwrite
-kubectl --context kustomize-example label node <gpu-node> my.cluster/environment=dev my.cluster/compute=gpu --overwrite
+kubectl --context minikube label node <cpu-node> my.cluster/environment=dev my.cluster/compute=cpu --overwrite
+kubectl --context minikube label node <gpu-node> my.cluster/environment=dev my.cluster/compute=gpu --overwrite
 ```
 
 Install Argo CD v3.5.6 and apply the three Applications:
 
 ```bash
-kubectl --context kustomize-example create namespace argocd
-kubectl --context kustomize-example apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.6/manifests/install.yaml
-kubectl --context kustomize-example rollout status deployment/argocd-repo-server -n argocd --timeout=300s
-kubectl --context kustomize-example rollout status deployment/argocd-server -n argocd --timeout=300s
-kubectl --context kustomize-example exec -n argocd deploy/argocd-repo-server -- kustomize version
-kubectl --context kustomize-example apply --server-side --force-conflicts -f argocd/job-health.yaml
-kubectl --context kustomize-example apply -f argocd/applications.yaml
+kubectl --context minikube create namespace argocd
+kubectl --context minikube apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.6/manifests/install.yaml
+kubectl --context minikube rollout status deployment/argocd-repo-server -n argocd --timeout=300s
+kubectl --context minikube rollout status deployment/argocd-server -n argocd --timeout=300s
+kubectl --context minikube exec -n argocd deploy/argocd-repo-server -- kustomize version
+kubectl --context minikube patch configmap argocd-cm -n argocd --type merge --patch-file argocd/job-health.yaml
+kubectl --context minikube apply -f argocd/applications.yaml
 ```
 
 `kustomize version` must print `v5.8.1`. The Applications track `main` of this repository. The overlays pin `kustomize-library` to a commit.
@@ -67,6 +69,34 @@ The script is `kubectl` only. For each of `dev`, `qa`, and `prod` it checks:
 | `scheduling-settings` | Not in the namespace |
 | Image | `registry.k8s.io/pause:3.10` |
 
-`PASS verify` is the last line. The pause Job does not exit, so the Application health stays `Progressing`. The test uses the sync status and the Ready pods, not that health field.
+`PASS verify` is the last line. The pause Job does not exit, so the Application health stays `Progressing` until `argocd/job-health.yaml` is merged into `argocd-cm`. The test uses the sync status and the Ready pods, not that health field.
 
-The `main` overlay is the `prod` namespace. Its node environment is `prod`.
+Patch that file. Do not `kubectl apply` it on its own. A partial apply replaces `argocd-cm` and Argo CD then reports the ConfigMap missing.
+
+The same reads for `qa` and for `prod` (the `main` overlay). Shown here for `dev`:
+
+```bash
+kubectl --context minikube exec -n argocd deploy/argocd-repo-server -- kustomize version
+kubectl --context minikube get application example-dev -n argocd -o jsonpath='{.status.sync.status}'
+
+kubectl --context minikube get deploy example-deployment -n dev \
+  -o jsonpath='{.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[?(@.key=="my.cluster/compute")].values[0]}'
+kubectl --context minikube get deploy example-deployment -n dev \
+  -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/sync-wave}'
+
+kubectl --context minikube get sts example-statefulset-notin-afm -n dev \
+  -o jsonpath='{.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[?(@.key=="scale.spectrum.ibm.com/role")].operator}'
+kubectl --context minikube get sts example-statefulset-afm-allowed -n dev \
+  -o jsonpath='{.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[?(@.key=="scale.spectrum.ibm.com/role")].operator}'
+
+kubectl --context minikube get job example-job -n dev \
+  -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/sync-wave}'
+kubectl --context minikube get cronjob example-cron-job -n dev \
+  -o jsonpath='{.spec.schedule}'
+
+kubectl --context minikube get namespace dev \
+  -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/sync-wave}'
+kubectl --context minikube get configmap scheduling-settings -n dev
+```
+
+Pass values are `v5.8.1`, `Synced`, `gpu`, `70`, `NotIn`, an empty AFM operator on the allowed StatefulSet, `76`, `0 * * * *`, and `-10`. The ConfigMap get must exit non-zero. `./scripts/verify.sh` runs these checks, then repeats them after relabeling the nodes for `qa` and `prod`.

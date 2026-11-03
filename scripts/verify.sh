@@ -1,5 +1,5 @@
 #!/bin/bash
-# Check the example Applications on the kustomize-example Minikube profile.
+# Check the example Applications on the Minikube profile named minikube.
 #
 # Usage (from the repository root, after ./scripts/deploy.sh):
 #   ./scripts/verify.sh
@@ -12,7 +12,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "${root}"
 
-ctx=kustomize-example
+ctx=minikube
 
 fail() {
   echo "FAIL: $*" >&2
