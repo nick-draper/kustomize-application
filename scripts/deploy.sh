@@ -54,7 +54,8 @@ done < <(kubectl --context "${ctx}" get nodes --sort-by=.metadata.name -o jsonpa
 
 echo "Argo CD v3.5.6"
 kubectl --context "${ctx}" get namespace argocd >/dev/null 2>&1 || kubectl --context "${ctx}" create namespace argocd
-kubectl --context "${ctx}" apply -n argocd -f "${argocd_manifest}"
+# Server-side apply avoids the applicationsets CRD last-applied annotation limit.
+kubectl --context "${ctx}" apply -n argocd --server-side --force-conflicts -f "${argocd_manifest}"
 kubectl --context "${ctx}" rollout status deployment/argocd-repo-server -n argocd --timeout=300s
 kubectl --context "${ctx}" rollout status deployment/argocd-server -n argocd --timeout=300s
 kubectl --context "${ctx}" wait --for=condition=Established crd/applications.argoproj.io --timeout=180s

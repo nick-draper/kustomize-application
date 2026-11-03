@@ -29,7 +29,7 @@ Install Argo CD v3.5.6 and apply the three Applications:
 
 ```bash
 kubectl --context kustomize-example create namespace argocd
-kubectl --context kustomize-example apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.6/manifests/install.yaml
+kubectl --context kustomize-example apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.6/manifests/install.yaml
 kubectl --context kustomize-example rollout status deployment/argocd-repo-server -n argocd --timeout=300s
 kubectl --context kustomize-example rollout status deployment/argocd-server -n argocd --timeout=300s
 kubectl --context kustomize-example exec -n argocd deploy/argocd-repo-server -- kustomize version
