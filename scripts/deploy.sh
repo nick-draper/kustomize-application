@@ -58,7 +58,9 @@ kubectl --context "${ctx}" get namespace argocd >/dev/null 2>&1 || kubectl --con
 kubectl --context "${ctx}" apply -n argocd --server-side --force-conflicts -f "${argocd_manifest}"
 kubectl --context "${ctx}" rollout status deployment/argocd-repo-server -n argocd --timeout=300s
 kubectl --context "${ctx}" rollout status deployment/argocd-server -n argocd --timeout=300s
+kubectl --context "${ctx}" rollout status statefulset/argocd-application-controller -n argocd --timeout=300s
 kubectl --context "${ctx}" wait --for=condition=Established crd/applications.argoproj.io --timeout=180s
+kubectl --context "${ctx}" apply --server-side --force-conflicts -f argocd/job-health.yaml
 
 ver=$(kubectl --context "${ctx}" exec -n argocd deploy/argocd-repo-server -- kustomize version)
 [ "${ver}" = "v5.8.1" ] || fail "Argo CD repo server kustomize is '${ver}', expected v5.8.1"

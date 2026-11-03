@@ -33,10 +33,13 @@ kubectl --context kustomize-example apply -n argocd --server-side --force-confli
 kubectl --context kustomize-example rollout status deployment/argocd-repo-server -n argocd --timeout=300s
 kubectl --context kustomize-example rollout status deployment/argocd-server -n argocd --timeout=300s
 kubectl --context kustomize-example exec -n argocd deploy/argocd-repo-server -- kustomize version
+kubectl --context kustomize-example apply --server-side --force-conflicts -f argocd/job-health.yaml
 kubectl --context kustomize-example apply -f argocd/applications.yaml
 ```
 
 `kustomize version` must print `v5.8.1`. The Applications track `main` of this repository. The overlays pin `kustomize-library` to a commit.
+
+`argocd/job-health.yaml` tells Argo CD that a running Job is healthy. The example Job uses `registry.k8s.io/pause:3.10`, which does not exit. Without that check, sync waits on wave 76 and never applies the CronJob at wave 78.
 
 `./scripts/deploy.sh` is the same sequence.
 
